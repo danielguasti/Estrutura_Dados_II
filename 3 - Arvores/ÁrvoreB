@@ -1,0 +1,150 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#define ORDEM 3 // Grau mínimo da árvore B (mínimo de chaves + 1)
+
+// Estrutura de um nó da Árvore B
+typedef struct NoArvoreB {
+    int numChaves;                       // Número de chaves no nó
+    int chaves[2 * ORDEM - 1];           // Vetor de chaves (máximo de 2 * ORDEM - 1 chaves)
+    struct NoArvoreB* filhos[2 * ORDEM]; // Vetor de ponteiros para os filhos
+    int ehFolha;                         // 1 se o nó for folha, 0 caso contrário
+} NoArvoreB;
+
+// Função para criar um novo nó
+NoArvoreB* criarNo(int ehFolha) {
+    NoArvoreB* novoNo = (NoArvoreB*)malloc(sizeof(NoArvoreB));
+    novoNo->numChaves = 0;         // Inicializa sem chaves
+    novoNo->ehFolha = ehFolha;     // Define se é folha ou não
+    for (int i = 0; i < 2 * ORDEM; i++) {
+        novoNo->filhos[i] = NULL;  // Inicializa todos os filhos como NULL
+    }
+    return novoNo;
+}
+
+// Função para dividir um nó filho cheio
+void dividirFilho(NoArvoreB* pai, int indice, NoArvoreB* filhoCheio) {
+    // Cria um novo nó que conterá ORDEM - 1 chaves do filhoCheio
+    NoArvoreB* novoFilho = criarNo(filhoCheio->ehFolha);
+    novoFilho->numChaves = ORDEM - 1;
+
+    // Copia as últimas (ORDEM - 1) chaves de filhoCheio para novoFilho
+    for (int i = 0; i < ORDEM - 1; i++) {
+        novoFilho->chaves[i] = filhoCheio->chaves[i + ORDEM];
+    }
+
+    // Copia os filhos do filhoCheio, se não for folha
+    if (!filhoCheio->ehFolha) {
+        for (int i = 0; i < ORDEM; i++) {
+            novoFilho->filhos[i] = filhoCheio->filhos[i + ORDEM];
+        }
+    }
+
+    // Reduz o número de chaves no filhoCheio
+    filhoCheio->numChaves = ORDEM - 1;
+
+    // Move os ponteiros de filhos do pai para abrir espaço para o novo filho
+    for (int i = pai->numChaves; i >= indice + 1; i--) {
+        pai->filhos[i + 1] = pai->filhos[i];
+    }
+    pai->filhos[indice + 1] = novoFilho;
+
+    // Move as chaves do pai para abrir espaço para a chave promovida
+    for (int i = pai->numChaves - 1; i >= indice; i--) {
+        pai->chaves[i + 1] = pai->chaves[i];
+    }
+    pai->chaves[indice] = filhoCheio->chaves[ORDEM - 1];
+    pai->numChaves++;
+}
+
+// Função para inserir uma chave em um nó não cheio
+void inserirNaoCheio(NoArvoreB* no, int chave) {
+    int i = no->numChaves - 1;
+
+    if (no->ehFolha) {
+        // Encontra a posição onde a nova chave será inserida
+        while (i >= 0 && no->chaves[i] > chave) {
+            no->chaves[i + 1] = no->chaves[i];
+            i--;
+        }
+        no->chaves[i + 1] = chave;
+        no->numChaves++;
+    } else {
+        // Encontra o filho apropriado para descer
+        while (i >= 0 && no->chaves[i] > chave) {
+            i--;
+        }
+        i++;
+
+        // Se o filho está cheio, divide-o
+        if (no->filhos[i]->numChaves == 2 * ORDEM - 1) {
+            dividirFilho(no, i, no->filhos[i]);
+            if (no->chaves[i] < chave) {
+                i++;
+            }
+        }
+        inserirNaoCheio(no->filhos[i], chave);
+    }
+}
+
+// Função para inserir uma chave na Árvore B
+NoArvoreB* inserir(NoArvoreB* raiz, int chave) {
+    if (raiz == NULL) {
+        // Se a árvore está vazia, cria um novo nó
+        raiz = criarNo(1);
+        raiz->chaves[0] = chave;
+        raiz->numChaves = 1;
+    } else {
+        // Se a raiz está cheia, cria uma nova raiz
+        if (raiz->numChaves == 2 * ORDEM - 1) {
+            NoArvoreB* novaRaiz = criarNo(0);
+            novaRaiz->filhos[0] = raiz;
+
+            dividirFilho(novaRaiz, 0, raiz);
+
+            // Insere a chave no nó apropriado
+            int i = (novaRaiz->chaves[0] < chave) ? 1 : 0;
+            inserirNaoCheio(novaRaiz->filhos[i], chave);
+
+            raiz = novaRaiz;
+        } else {
+            inserirNaoCheio(raiz, chave);
+        }
+    }
+    return raiz;
+}
+
+// Função para percorrer e imprimir a Árvore B em ordem
+void percorrer(NoArvoreB* no) {
+    if (no != NULL) {
+        for (int i = 0; i < no->numChaves; i++) {
+            if (!no->ehFolha) {
+                percorrer(no->filhos[i]);
+            }
+            printf("%d ", no->chaves[i]);
+        }
+        if (!no->ehFolha) {
+            percorrer(no->filhos[no->numChaves]);
+        }
+    }
+}
+
+// Função principal
+int main() {
+    NoArvoreB* raiz = NULL;
+
+    // Insere chaves na Árvore B
+    raiz = inserir(raiz, 10);
+    raiz = inserir(raiz, 20);
+    raiz = inserir(raiz, 5);
+    raiz = inserir(raiz, 6);
+    raiz = inserir(raiz, 12);
+    raiz = inserir(raiz, 30);
+    raiz = inserir(raiz, 7);
+    raiz = inserir(raiz, 17);
+
+    printf("Percorrendo a Árvore B:\n");
+    percorrer(raiz);
+
+    return 0;
+}
