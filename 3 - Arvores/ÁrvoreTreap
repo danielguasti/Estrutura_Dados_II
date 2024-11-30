@@ -1,0 +1,140 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+// Estrutura do nó da Treap
+typedef struct NoTreap {
+    int chave;            // Chave da árvore binária de busca (BST)
+    int prioridade;       // Prioridade para manter a propriedade do heap
+    struct NoTreap *esquerda, *direita; // Ponteiros para os nós filhos
+} NoTreap;
+
+// Função para criar um novo nó
+NoTreap* criarNo(int chave) {
+    NoTreap* no = (NoTreap*)malloc(sizeof(NoTreap)); // Aloca memória para o nó
+    no->chave = chave;                   // Define a chave
+    no->prioridade = rand() % 100;       // Define uma prioridade aleatória
+    no->esquerda = no->direita = NULL;   // Inicializa os filhos como NULL
+    return no;
+}
+
+// Rotação à direita para restaurar a propriedade do heap
+NoTreap* rotacaoDireita(NoTreap* y) {
+    NoTreap* x = y->esquerda;    // O filho esquerdo se torna o novo nó raiz
+    NoTreap* T2 = x->direita;    // O filho direito de x será o filho esquerdo de y
+
+    // Realiza a rotação
+    x->direita = y;
+    y->esquerda = T2;
+
+    return x; // Retorna o novo nó raiz
+}
+
+// Rotação à esquerda para restaurar a propriedade do heap
+NoTreap* rotacaoEsquerda(NoTreap* x) {
+    NoTreap* y = x->direita;    // O filho direito se torna o novo nó raiz
+    NoTreap* T2 = y->esquerda; // O filho esquerdo de y será o filho direito de x
+
+    // Realiza a rotação
+    y->esquerda = x;
+    x->direita = T2;
+
+    return y; // Retorna o novo nó raiz
+}
+
+// Função para inserir uma nova chave na Treap
+NoTreap* inserir(NoTreap* raiz, int chave) {
+    // Caso base: insere o nó se a árvore está vazia
+    if (!raiz)
+        return criarNo(chave);
+
+    // Inserção como numa árvore binária de busca
+    if (chave < raiz->chave) {
+        raiz->esquerda = inserir(raiz->esquerda, chave); // Insere na subárvore esquerda
+
+        // Verifica e ajusta a propriedade do heap
+        if (raiz->esquerda->prioridade > raiz->prioridade)
+            raiz = rotacaoDireita(raiz); // Realiza uma rotação à direita
+    } else if (chave > raiz->chave) {
+        raiz->direita = inserir(raiz->direita, chave); // Insere na subárvore direita
+
+        // Verifica e ajusta a propriedade do heap
+        if (raiz->direita->prioridade > raiz->prioridade)
+            raiz = rotacaoEsquerda(raiz); // Realiza uma rotação à esquerda
+    }
+
+    return raiz; // Retorna o nó raiz atualizado
+}
+
+// Função para remover uma chave da Treap
+NoTreap* remover(NoTreap* raiz, int chave) {
+    // Caso base: a chave não foi encontrada
+    if (!raiz)
+        return NULL;
+
+    // Navega na árvore para encontrar o nó a ser removido
+    if (chave < raiz->chave)
+        raiz->esquerda = remover(raiz->esquerda, chave); // Busca na subárvore esquerda
+    else if (chave > raiz->chave)
+        raiz->direita = remover(raiz->direita, chave); // Busca na subárvore direita
+    else {
+        // Caso 1: Nó com um único filho ou nenhum filho
+        if (!raiz->esquerda) {
+            NoTreap* temp = raiz->direita; // Substitui pelo filho direito
+            free(raiz); // Libera o nó atual
+            return temp;
+        } else if (!raiz->direita) {
+            NoTreap* temp = raiz->esquerda; // Substitui pelo filho esquerdo
+            free(raiz); // Libera o nó atual
+            return temp;
+        }
+
+        // Caso 2: Nó com dois filhos
+        // Realiza rotações para substituir o nó pela subárvore com maior prioridade
+        if (raiz->esquerda->prioridade > raiz->direita->prioridade) {
+            raiz = rotacaoDireita(raiz); // Rotação à direita
+            raiz->direita = remover(raiz->direita, chave); // Continua a remoção
+        } else {
+            raiz = rotacaoEsquerda(raiz); // Rotação à esquerda
+            raiz->esquerda = remover(raiz->esquerda, chave); // Continua a remoção
+        }
+    }
+
+    return raiz; // Retorna o nó raiz atualizado
+}
+
+// Função para imprimir a Treap em ordem (in-order traversal)
+void imprimirEmOrdem(NoTreap* raiz) {
+    if (raiz) {
+        imprimirEmOrdem(raiz->esquerda); // Visita a subárvore esquerda
+        printf("Chave: %d, Prioridade: %d\n", raiz->chave, raiz->prioridade); // Imprime o nó atual
+        imprimirEmOrdem(raiz->direita); // Visita a subárvore direita
+    }
+}
+
+// Função principal
+int main() {
+    srand(time(0)); // Semente para gerar prioridades aleatórias
+
+    NoTreap* raiz = NULL;
+
+    // Inserção de chaves na Treap
+    raiz = inserir(raiz, 50);
+    raiz = inserir(raiz, 30);
+    raiz = inserir(raiz, 20);
+    raiz = inserir(raiz, 40);
+    raiz = inserir(raiz, 70);
+    raiz = inserir(raiz, 60);
+    raiz = inserir(raiz, 80);
+
+    // Imprime a Treap após inserções
+    printf("Treap após inserções:\n");
+    imprimirEmOrdem(raiz);
+
+    // Remoção de uma chave
+    raiz = remover(raiz, 50); // Remove o nó com chave 50
+    printf("\nTreap após remoção de 50:\n");
+    imprimirEmOrdem(raiz);
+
+    return 0;
+}
